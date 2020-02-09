@@ -19,7 +19,7 @@ class ActiveDataProvider extends YiiActiveDataProvider {
     use _DateTrait;
 
     /**
-     * @var string format string for the database
+     * @var string date format string for the database
      */
     public $sqlDateFormat = 'Y-m-d';
 
@@ -28,9 +28,11 @@ class ActiveDataProvider extends YiiActiveDataProvider {
      * @throws \Exception
      */
     public function init()  {
+        if (is_null($this->beginDate)) $this->beginDate = $this->query->min($this->dateAttribute);
+        else $this->head = true;
+        if (is_null($this->endDate)) $this->endDate = $this->query->max($this->dateAttribute);
+        else $this->tail = true;
         $this->initTrait();
-        $this->beginDate = $this->normalizeDate(new \DateTimeImmutable($this->query->min($this->dateAttribute)));
-        $this->endDate = $this->normalizeDate(new \DateTimeImmutable($this->query->max($this->dateAttribute)), true);
     }
 
     /**
@@ -42,8 +44,11 @@ class ActiveDataProvider extends YiiActiveDataProvider {
         $attribute = $this->dateAttribute;
         $active = $this->getActive();
 
-        $this->query->orderBy($attribute)
-            ->andWhere(['between', $attribute, $active[0]->format($this->sqlDateFormat), $active[1]->format($this->sqlDateFormat)]);
+        $this->query->orderBy($attribute);
+        if ($active[0] != $this->beginDate)
+            $this->query->andWhere(['>=', $attribute, $active[0]->format($this->sqlDateFormat)]);
+        if ($active[0] != $this->endLimit)
+            $this->query->andWhere(['<', $attribute, $active[1]->format($this->sqlDateFormat)]);
         return parent::prepareModels();
     }
 }

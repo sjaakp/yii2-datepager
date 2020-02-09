@@ -34,7 +34,7 @@ class DatePager extends Widget {
      * @var null | string | callable
      *  - null: DatePager guesses based on interval
      *  - string: date format according to yii\i18n\Formatter::$dateFormat
-     *  - callable: function($dateTimeInterface) returning string
+     *  - callable: function($dateTimeInterface, $thisDatePager) returning string
      */
     public $labelFormat;
 
@@ -97,6 +97,10 @@ class DatePager extends Widget {
         if (! $this->dataProvider) {
             throw new InvalidConfigException('DatePager::dataProvider must be set.');
         }
+        if (! in_array(_DateTrait::class, class_uses($this->dataProvider)))
+        {
+            throw new InvalidConfigException('DatePager::dataProvider is not a datapager provider.');
+        }
         if (is_null($this->labelFormat))    {
             $int = $this->dataProvider->interval;
             $this->labelFormat = $int->d == 0
@@ -121,7 +125,7 @@ class DatePager extends Widget {
         $end = $active;
         $interval = $this->dataProvider->interval;
         $beginLimit = $this->dataProvider->beginDate;
-        $endLimit = $this->dataProvider->endDate->sub($interval);
+        $endLimit = $this->dataProvider->endLimit;
 
         $buttonCount = $this->maxButtonCount;
 
@@ -195,8 +199,11 @@ class DatePager extends Widget {
      * @throws InvalidConfigException
      */
     public function getDateLabel($page) {
-        return is_callable($this->labelFormat) ? call_user_func($this->labelFormat, $page)
-            : \Yii::$app->formatter->asDate($page, $this->labelFormat);
+        if (is_callable($this->labelFormat)) return call_user_func($this->labelFormat, $page, $this);
+        $r = \Yii::$app->formatter->asDate($page, $this->labelFormat);
+        $d = $this->dataProvider;
+        if ($d->head && $page == $d->beginDate) $r = '... ' . $r;
+        if ($d->tail && $page == $d->endLimit) $r = $r . ' ...';
+        return $r;
     }
-
 }

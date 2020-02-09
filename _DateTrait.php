@@ -45,6 +45,10 @@ trait _DateTrait {
     public $beginDate;
     public $endDate;
 
+    public $head = false;
+    public $tail = false;
+    public $endLimit;
+
     protected $_active;
 
     /**
@@ -53,9 +57,12 @@ trait _DateTrait {
      */
     protected function initTrait()  {
         if (! $this->dateAttribute) {
-            throw new InvalidConfigException('_DateTrait::dateAttribute must be set.');
+            throw new InvalidConfigException(get_called_class() . '::dateAttribute must be set.');
         }
         $this->interval = new \DateInterval($this->interval);
+        $this->beginDate = $this->normalizeDate(new \DateTimeImmutable($this->beginDate));
+        $this->endDate = $this->normalizeDate(new \DateTimeImmutable($this->endDate), true);
+        $this->endLimit = $this->endDate->sub($this->interval);
     }
 
     /**
