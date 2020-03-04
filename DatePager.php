@@ -3,11 +3,11 @@
  * sjaakp/yii2-datepager
  * ----------
  * Date pager for Yii2 framework
- * Version 1.0.0
+ * Version 1.1.0
  * Copyright (c) 2020
  * Sjaak Priester, Amsterdam
  * MIT License
- * https://github.com/sjaakp/yii2-wordcount
+ * https://github.com/sjaakp/yii2-datepager
  * https://sjaakpriester.nl
  */
 
@@ -117,54 +117,54 @@ class DatePager extends Widget {
      * @throws InvalidConfigException
      */
     public function run()   {
+        $dp = $this->dataProvider;
         $buttons = [];
 
-        /* @var $active \DateTimeInterface */
-        $active = $this->dataProvider->active[0];
+        /* @var $active \DateTimeImmutable */
+        $active = $dp->active[0];
         $begin = $active;
         $end = $active;
-        $interval = $this->dataProvider->interval;
-        $beginLimit = $this->dataProvider->beginDate;
-        $endLimit = $this->dataProvider->endLimit;
+        $beginLimit = $dp->beginDate;
+        $endLimit = $dp->endDate;
 
         $buttonCount = $this->maxButtonCount;
 
         while ($buttonCount > 0)    {
-            if ($end < $endLimit)   {
-                $end = $end->add($interval);
+            if ($dp->isLeftOf($end, $endLimit))   {
+                $end = $end->add($dp->interval);
                 $buttonCount--;
                 if ($buttonCount == 0) break;
             }
             else    {
-                if ($begin <= $beginLimit) break;
+                if ($dp->isEqualOrLeftOf($begin, $beginLimit)) break;
             }
-            if ($begin > $beginLimit)   {
-                $begin = $begin->sub($interval);
+            if ($dp->isRightOf($begin, $beginLimit))   {
+                $begin = $begin->sub($dp->interval);
                 $buttonCount--;
                 if ($buttonCount == 0) break;
             }
         }
 
-        while ($begin <= $end)    {
+        while ($dp->isEqualOrLeftOf($begin, $end))    {
             $buttons[] = $this->renderPageButton($begin, $begin == $active);
-            $begin = $begin->add($interval);
+            $begin = $begin->add($dp->interval);
         }
 
         if (count($buttons))    {
             if ($this->prevPageLabel)  {
-                $prev = $this->renderPageButton($active->sub($interval), false, $this->prevPageLabel, $active <= $beginLimit);
+                $prev = $this->renderPageButton($active->sub($dp->interval), false, $this->prevPageLabel, $dp->isEqualOrLeftOf($active, $beginLimit));
                 array_unshift($buttons, $prev);
             }
             if ($this->firstPageLabel)  {
-                $first = $this->renderPageButton($beginLimit, false, $this->firstPageLabel, $active <= $beginLimit);
+                $first = $this->renderPageButton($beginLimit, false, $this->firstPageLabel, $dp->isEqualOrLeftOf($active, $beginLimit));
                 array_unshift($buttons, $first);
             }
             if ($this->nextPageLabel) {
-                $next = $this->renderPageButton($active->add($interval), false, $this->nextPageLabel, $active >= $endLimit);
+                $next = $this->renderPageButton($active->add($dp->interval), false, $this->nextPageLabel, $dp->isEqualOrRightOf($active, $endLimit));
                 $buttons[] = $next;
             }
             if ($this->lastPageLabel)  {
-                $last = $this->renderPageButton($endLimit, false, $this->lastPageLabel, $active >= $endLimit);
+                $last = $this->renderPageButton($endLimit, false, $this->lastPageLabel, $dp->isEqualOrRightOf($active, $endLimit));
                 $buttons[] = $last;
             }
         }
@@ -203,7 +203,7 @@ class DatePager extends Widget {
         $r = \Yii::$app->formatter->asDate($page, $this->labelFormat);
         $d = $this->dataProvider;
         if ($d->head && $page == $d->beginDate) $r = '... ' . $r;
-        if ($d->tail && $page == $d->endLimit) $r = $r . ' ...';
+        if ($d->tail && $page == $d->endDate) $r = $r . ' ...';
         return $r;
     }
 }

@@ -3,11 +3,11 @@
  * sjaakp/yii2-datepager
  * ----------
  * Date pager for Yii2 framework
- * Version 1.0.0
+ * Version 1.1.0
  * Copyright (c) 2020
  * Sjaak Priester, Amsterdam
  * MIT License
- * https://github.com/sjaakp/yii2-wordcount
+ * https://github.com/sjaakp/yii2-datepager
  * https://sjaakpriester.nl
  */
 
@@ -17,6 +17,7 @@ use Yii;
 use yii\web\Request;
 use yii\base\InvalidConfigException;
 use yii\data\BaseDataProvider;
+use sjaakp\helpers\Roman;
 
 trait _DateTrait {
     /**
@@ -40,14 +41,18 @@ trait _DateTrait {
     public $interval = 'P1Y';
 
     /**
-     * @var string | \DateTimeInterface
+     * @var string | \DateTimeImmutable
      */
     public $beginDate;
     public $endDate;
 
+    /**
+     * @var bool whether ordering in ascending or descending
+     */
+    public $ascending = true;
+
     public $head = false;
     public $tail = false;
-    public $endLimit;
 
     protected $_active;
 
@@ -60,9 +65,17 @@ trait _DateTrait {
             throw new InvalidConfigException(get_called_class() . '::dateAttribute must be set.');
         }
         $this->interval = new \DateInterval($this->interval);
+        $this->interval->invert = ! $this->ascending;
+        if (! $this->ascending)   {
+            $v = $this->beginDate;
+            $this->beginDate = $this->endDate;
+            $this->endDate = $v;
+            $v = $this->head;
+            $this->head = $this->tail;
+            $this->tail = $v;
+        }
         $this->beginDate = $this->normalizeDate(new \DateTimeImmutable($this->beginDate));
-        $this->endDate = $this->normalizeDate(new \DateTimeImmutable($this->endDate), true);
-        $this->endLimit = $this->endDate->sub($this->interval);
+        $this->endDate = $this->normalizeDate(new \DateTimeImmutable($this->endDate));
     }
 
     /**
@@ -79,7 +92,7 @@ trait _DateTrait {
 
             $begin = isset($params[$name]) && is_scalar($params[$name])
                 ? new \DateTimeImmutable(substr($params[$name] . '-01-01', 0, 10)) : $this->beginDate;
-            $end = $begin->add($this->interval);
+            $end = $this->ascending ? $begin->add($this->interval) : $begin->sub($this->interval);
             $this->_active = [$begin, $end];
         }
         return $this->_active;
@@ -89,7 +102,8 @@ trait _DateTrait {
      * @param $page \DateTimeInterface
      * @return string
      */
-    public function createUrl($page)    {
+    public function createUrl($page)
+    {
         /* @var $this BaseDataProvider */
         $request = Yii::$app->getRequest();
         $params = $request instanceof Request ? $request->getQueryParams() : [];
@@ -106,12 +120,51 @@ trait _DateTrait {
     }
 
     /**
+     * @param $me \DateTimeImmutable
+     * @param $from \DateTimeImmutable
+     * @return bool
+     */
+    public function isLeftOf($me, $from)
+    {
+        return $this->ascending ? $me < $from : $me > $from;
+    }
+
+    /**
+     * @param $me \DateTimeImmutable
+     * @param $from \DateTimeImmutable
+     * @return bool
+     */
+    public function isRightOf($me, $from)
+    {
+        return $this->isLeftOf($from, $me);
+    }
+
+    /**
+     * @param $me \DateTimeImmutable
+     * @param $from \DateTimeImmutable
+     * @return bool
+     */
+    public function isEqualOrLeftOf($me, $from)
+    {
+        return ($me == $from) || $this->isLeftOf($me, $from);
+    }
+
+    /**
+     * @param $me \DateTimeImmutable
+     * @param $from \DateTimeImmutable
+     * @return bool
+     */
+    public function isEqualOrRightOf($me, $from)
+    {
+        return ($me == $from) || $this->isLeftOf($from, $me);
+    }
+
+    /**
      * @param $date \DateTimeImmutable
      * @return mixed
      */
-    protected function normalizeDate($date, $ceil = false)
+    protected function normalizeDate($date)
     {
-        $roman = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
         $im = $this->interval->m;
         $d = 1;
         if ($im) {
@@ -121,11 +174,10 @@ trait _DateTrait {
                 $d = $step * $id + 1;
             }
             $step = intdiv($date->format('n') - 1, $im);
-            $m = $roman[$step * $im];
+            $m = Roman::toRoman($step * $im);
         }
         else $m = 'I';
         $date = $date->modify("$m $d 00:00:00");
-        if ($ceil) $date = $date->add($this->interval);
         return $date;
     }
 }

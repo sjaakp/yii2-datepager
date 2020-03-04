@@ -89,6 +89,11 @@ Must be set.
 [`DateInterval`](https://www.php.net/manual/en/dateinterval.construct.php) 
 can understand. Default: `'P1Y'` (one year).
 
+#### $ascending ####
+
+`bool` Whether the **DatePager** pages are rendered in ascending or descending
+order. Default: `true` (ascending).
+
 #### $beginDate ####
 
 `string` Date of the first **Datepager** page. If not set (default), **Datepager** determines
