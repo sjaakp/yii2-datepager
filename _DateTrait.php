@@ -3,7 +3,7 @@
  * sjaakp/yii2-datepager
  * ----------
  * Date pager for Yii2 framework
- * Version 1.1.0
+ * Version 1.1.1
  * Copyright (c) 2020
  * Sjaak Priester, Amsterdam
  * MIT License
@@ -146,7 +146,8 @@ trait _DateTrait {
      */
     public function isEqualOrLeftOf($me, $from)
     {
-        return ($me == $from) || $this->isLeftOf($me, $from);
+        return ! $this->isLeftOf($from, $me);   // ! isRightOf
+//        return ($me == $from) || $this->isLeftOf($me, $from);
     }
 
     /**
@@ -156,7 +157,8 @@ trait _DateTrait {
      */
     public function isEqualOrRightOf($me, $from)
     {
-        return ($me == $from) || $this->isLeftOf($from, $me);
+        return ! $this->isLeftOf($me, $from);
+//        return ($me == $from) || $this->isLeftOf($from, $me);
     }
 
     /**
@@ -165,19 +167,24 @@ trait _DateTrait {
      */
     protected function normalizeDate($date)
     {
-        $im = $this->interval->m;
-        $d = 1;
-        if ($im) {
-            $id = $this->interval->d;
-            if ($id)    {
-                $step = intdiv($date->format('j') - 1, $id);
-                $d = $step * $id + 1;
-            }
-            $step = intdiv($date->format('n') - 1, $im);
-            $m = Roman::toRoman($step * $im);
+        $y = $date->format('Y');
+        $iy = $this->interval->y;
+        if ($iy)    {
+            $y = intdiv($y, $iy) * $iy;
         }
-        else $m = 'I';
-        $date = $date->modify("$m $d 00:00:00");
+        $m = 'I';
+        $im = $this->interval->m;
+        if ($im) {
+            $step = intdiv($date->format('n') - 1, $im);
+            $m = Roman::toRoman($step * $im + 1);
+        }
+        $d = 1;
+        $id = $this->interval->d;
+        if ($id)    {
+            $step = intdiv($date->format('j') - 1, $id);
+            $d = $step * $id + 1;
+        }
+        $date = $date->modify("$m $d $y 00:00:00");
         return $date;
     }
 }
